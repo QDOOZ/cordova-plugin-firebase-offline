@@ -7,14 +7,31 @@ function DbSnapshot(ref, data) {
     this.ref = ref;
     this.key = data.key;
     this._data = data;
+    this.asCollection = data && data.children && (typeof data.children === "object") 
+        ? data.children.map(function(child) { 
+            return {
+                key: child.key,
+                val: function() { return data.value[child.key] }
+            }
+        })
+        : [];
 }
 
 DbSnapshot.prototype = {
     val: function() {
+        if (typeof this._data.value === 'undefined') {
+            return null
+        }
         return this._data.value;
     },
     getPriority: function() {
         return this._data.priority;
+    },
+    forEach: function(callback) {
+        return this.asCollection.forEach(callback)
+    },
+    exists: function() {
+        return !!this._data.value;
     }
 };
 
@@ -49,8 +66,8 @@ DbQuery.prototype = {
     on: function(eventType, success, error) {
         var ref = this.ref;
         var callback = function(data) {
-                success(new DbSnapshot(ref, data));
-            };
+            success && success(new DbSnapshot(ref, data));
+        };
 
         callback._id = utils.createUUID();
 
@@ -59,15 +76,24 @@ DbQuery.prototype = {
 
         return callback;
     },
-    once: function(eventType) {
+    once: function(eventType, successCallback, errorCallback) {
         var ref = this.ref;
         var args = [ref._url, ref._path,
             eventType, this._orderBy, this._includes, this._limit, ""];
         return new Promise(function(resolve, reject) {
             exec(resolve, reject, PLUGIN_NAME, "on", args);
         }).then(function(data) {
-            return new DbSnapshot(ref, data);
-        });
+            var snapshot = new DbSnapshot(ref, data);
+            if (successCallback) {
+                successCallback(snapshot)
+            }
+            return snapshot
+        }).catch(function (error) {
+            if (errorCallback) {
+                errorCallback(error)
+            }
+            throw error
+        })
     },
     off: function(eventType, callback) {
         var ref = this.ref;
@@ -90,10 +116,11 @@ DbQuery.prototype = {
     }
 };
 
-function DbRef(path, url) {
+function DbRef(path, url, key) {
     this.ref = this;
     this._path = path || "/";
     this._url = url || "";
+    this.key = key || (path && path.split("/").pop()) || "";
 }
 
 DbRef.prototype = new DbQuery();
@@ -105,7 +132,7 @@ DbRef.prototype.child = function(path) {
 };
 
 DbRef.prototype.remove = function() {
-    var args = [this._url, this._path];
+    var args = [this._url, this._path, null, null];
     return new Promise(function(resolve, reject) {
         exec(resolve, reject, PLUGIN_NAME, "set", args);
     });
@@ -123,7 +150,7 @@ DbRef.prototype.push = function(value) {
     return new Promise(function(resolve, reject) {
         exec(resolve, reject, PLUGIN_NAME, "push", args);
     }).then(function(path) {
-        return new DbRef(path, db);
+        return new DbRef(path.path, '', path.key);
     });
 };
 

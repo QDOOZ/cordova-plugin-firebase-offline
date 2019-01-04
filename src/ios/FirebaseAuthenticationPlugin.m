@@ -2,6 +2,8 @@
 
 @implementation FirebaseAuthenticationPlugin
 
+static FIRUser* anonymousUser;
+
 - (void)pluginInitialize {
     NSLog(@"Starting Firebase Authentication plugin");
 
@@ -94,6 +96,18 @@
     [[FIRAuth auth] signInAnonymouslyWithCompletion:^(FIRAuthDataResult *result, NSError *error) {
         [self.commandDelegate sendPluginResult:[self createAuthResult:result
                                                             withError:error] callbackId:command.callbackId];
+    }];
+}
+
+- (void)deleteCurrentAnonymousUser:(CDVInvokedUrlCommand *)command {
+    [anonymousUser deleteWithCompletion:^(NSError *_Nullable error) {
+        CDVPluginResult *pluginResult;
+        if (error) {
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:error.localizedDescription];
+        } else {
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+        }
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
     }];
 }
 
@@ -200,7 +214,10 @@
 - (CDVPluginResult*) createAuthResult:(FIRAuthDataResult*)result withError:(NSError*)error {
     CDVPluginResult *pluginResult;
     if (error) {
-        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:error.localizedDescription];
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:@{
+          @"code": @(error.code),
+          @"message": error.localizedDescription
+        }];
     } else {
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:[self userToDictionary:result.user]];
     }
@@ -212,6 +229,9 @@
         dispatch_async(dispatch_get_main_queue(), ^{
             CDVPluginResult *pluginResult;
             if (user) {
+                if (user.isAnonymous) {
+                    anonymousUser = user;
+                }
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:[self userToDictionary:user]];
             } else {
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
@@ -219,6 +239,95 @@
             [pluginResult setKeepCallbackAsBool:YES];
             [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
         });
+    }];
+}
+
+- (void)changePassword:(CDVInvokedUrlCommand *)command {
+    NSString* newPassword = [command.arguments objectAtIndex:0];
+    FIRUser *user = [FIRAuth auth].currentUser;
+    [user updatePassword:newPassword completion:^(NSError *_Nullable error) {
+        CDVPluginResult *pluginResult;
+        if (error) {
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:[self exceptionToDictionary:error]];
+        } else {
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+        }
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    }];
+}
+
+- (void)updateEmail:(CDVInvokedUrlCommand *)command {
+    NSString* email = [command.arguments objectAtIndex:0];
+    FIRUser *user = [FIRAuth auth].currentUser;
+    
+    [user updateEmail:email completion:^(NSError *_Nullable error) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            CDVPluginResult *pluginResult;
+            if (error) {
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:[self exceptionToDictionary:error]];
+            } else {
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+            }
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+        });
+    }];
+}
+
+- (void)updateProfile:(CDVInvokedUrlCommand *)command {
+    NSString* displayName = [command.arguments objectAtIndex:0];
+    NSString* photoURL = [command.arguments objectAtIndex:1];
+    
+    FIRUserProfileChangeRequest *changeRequest = [[FIRAuth auth].currentUser profileChangeRequest];
+    if(displayName) {
+        changeRequest.displayName = displayName;
+    }
+    if(photoURL) {
+        NSString *charactersToEscape = @"!*'();:@&=+$,/?%#[]";
+        NSCharacterSet *allowedCharacters = [[NSCharacterSet characterSetWithCharactersInString:charactersToEscape] invertedSet];
+        
+        NSString *url = [NSString stringWithFormat:@"%@", photoURL];
+        NSString *encodedUrl = [url stringByAddingPercentEncodingWithAllowedCharacters:allowedCharacters];
+        changeRequest.photoURL = [NSURL URLWithString: encodedUrl];
+    }
+    
+    [changeRequest commitChangesWithCompletion:^(NSError *_Nullable error) {
+//        dispatch_async(dispatch_get_main_queue(), ^{
+            CDVPluginResult *pluginResult;
+            if (error) {
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:[self exceptionToDictionary:error]];
+            } else {
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+            }
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+//        });
+    }];
+}
+
+- (void)currentUser:(CDVInvokedUrlCommand *)command {
+    FIRUser *user = [FIRAuth auth].currentUser;
+    CDVPluginResult *pluginResult;
+    if (user) {
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:[self userToDictionary:user]];
+    } else {
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+    }
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void)reauthenticateWithCredential:(CDVInvokedUrlCommand *)command {
+    FIRUser *user = [FIRAuth auth].currentUser;
+    NSString* email = [command.arguments objectAtIndex:0];
+    NSString* password = [command.arguments objectAtIndex:1];
+    
+    FIRAuthCredential *credential = [FIREmailAuthProvider credentialWithEmail: email password: password];
+    [user reauthenticateWithCredential:credential completion:^(NSError *_Nullable error) {
+        CDVPluginResult *pluginResult;
+        if (error) {
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:[self exceptionToDictionary:error]];
+        } else {
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+        }
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
     }];
 }
 
@@ -231,7 +340,16 @@
         @"email": user.email ? user.email : @"",
         @"phoneNumber": user.phoneNumber ? user.phoneNumber : @"",
         @"photoURL": user.photoURL ? user.photoURL.absoluteString : @"",
-        @"providerData": (providerData == nil || [providerData count] == 0) ? @[] : @[providerData[0].providerID]
+        @"providerData": (providerData == nil || [providerData count] == 0) ? @[] : @[providerData[0].providerID],
+        @"isAnonymous": user.isAnonymous ? @YES : @NO
+    };
+}
+
+- (NSDictionary*)exceptionToDictionary:(NSError *)error {
+    return @{
+         @"code": @(error.code),
+         @"message": error.localizedDescription
+     };
 }
 
 @end

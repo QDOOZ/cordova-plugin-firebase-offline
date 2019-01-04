@@ -29,7 +29,7 @@ module.exports = {
             exec(resolve, reject, PLUGIN_NAME, "signInWithEmailAndPassword", [email, password]);
         });
     },
-    signInAnonymously: function(email, password) {
+    signInAnonymously: function() {
         return new Promise(function(resolve, reject) {
             exec(resolve, reject, PLUGIN_NAME, "signInAnonymously", []);
         });
@@ -80,5 +80,35 @@ module.exports = {
         return function() {
             exec(null, null, PLUGIN_NAME, "setAuthStateChanged", [true]);
         };
+    },
+    changePassword: function(newPassword) {
+        return new Promise(function(resolve, reject) {
+            exec(resolve, reject, PLUGIN_NAME, "changePassword", [newPassword]);
+        });
+    },
+    updateEmail: function(email) {
+        return new Promise(function(resolve, reject) {
+            exec(resolve, reject, PLUGIN_NAME, "updateEmail", [email]);
+        });
+    },
+    updateProfile: function(displayName, photoURL) {
+        return new Promise(function(resolve, reject) {
+            exec(resolve, reject, PLUGIN_NAME, "updateProfile", [displayName, photoURL]);
+        });
+    },
+    deleteCurrentAnonymousUser: function() {
+        return new Promise(function(resolve, reject) {
+            exec(resolve, reject, PLUGIN_NAME, "deleteCurrentAnonymousUser", []);
+        });
+    },
+    currentUser: function() {
+        return new Promise(function(resolve, reject) {
+            exec(resolve, reject, PLUGIN_NAME, "currentUser", []);
+        });
+    },
+    reauthenticateWithCredential: function(email, password) {
+        return new Promise(function(resolve, reject) {
+            exec(resolve, reject, PLUGIN_NAME, "reauthenticateWithCredential", [email, password]);
+        });
     }
 };

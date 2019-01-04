@@ -85,21 +85,35 @@
     NSString *path = [command argumentAtIndex:1];
     id value = [command argumentAtIndex:2];
     FIRDatabaseReference *ref = [database referenceWithPath:path];
+    FIRDatabaseReference *childRef = [ref childByAutoId];
 
-    [[ref childByAutoId] setValue:value withCompletionBlock:^(NSError *error, FIRDatabaseReference *ref) {
+    if (!value) {
         dispatch_async(dispatch_get_main_queue(), ^{
-            CDVPluginResult *pluginResult;
-            if (error) {
-                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:@{
-                        @"code": @(error.code),
-                        @"message": error.description
-                }];
-            } else {
-                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:[NSString stringWithFormat:@"%@/%@", path, [ref key]]];
-            }
+            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:@{
+                @"key": [childRef key],
+                @"path": [NSString stringWithFormat:@"%@/%@", path, [childRef key]]
+            }];
             [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
         });
-    }];
+    } else {
+        [childRef setValue:value withCompletionBlock:^(NSError *error, FIRDatabaseReference *ref) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                CDVPluginResult *pluginResult;
+                if (error) {
+                    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:@{
+                            @"code": @(error.code),
+                            @"message": error.description
+                    }];
+                } else {
+                    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:@{
+                        @"key": [ref key],
+                        @"path": [NSString stringWithFormat:@"%@/%@", path, [ref key]]
+                    }];
+                }
+                [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+            });
+        }];
+    }
 }
 
 - (void)on:(CDVInvokedUrlCommand *)command {
@@ -122,21 +136,36 @@
     BOOL keepCallback = [uid length] > 0 ? YES : NO;
     id handler = ^(FIRDataSnapshot *_Nonnull snapshot) {
         dispatch_async(dispatch_get_main_queue(), ^{
+            NSMutableArray *children = [NSMutableArray array];
+            for (FIRDataSnapshot *child in snapshot.children) {
+                NSDictionary *childObj = @{ @"key" : child.key, @"value" : child.value};
+                [children addObject:childObj];
+            }
             CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:@{
                 @"key": snapshot.key,
                 @"value": snapshot.value,
-                @"priority": snapshot.priority
+                @"priority": snapshot.priority,
+                @"children": children
             }];
             [pluginResult setKeepCallbackAsBool:keepCallback];
             [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
         });
     };
 
+    id errorHandler = ^(NSError * _Nonnull error) {
+        CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:@{
+          @"code": @(error.code),
+          @"message": error.description
+        }];
+        [pluginResult setKeepCallbackAsBool:keepCallback];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    };
+    
     if (keepCallback) {
-        FIRDatabaseHandle handle = [query observeEventType:type withBlock:handler];
+        FIRDatabaseHandle handle = [query observeEventType:type withBlock:handler withCancelBlock:errorHandler];
         [self.listeners setObject:@(handle) forKey:uid];
     } else {
-        [query observeSingleEventOfType:type withBlock:handler];
+        [query observeSingleEventOfType:type withBlock:handler withCancelBlock:errorHandler];
     }
 }
 

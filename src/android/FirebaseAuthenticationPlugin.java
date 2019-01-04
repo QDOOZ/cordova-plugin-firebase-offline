@@ -1,6 +1,7 @@
 package by.chemerisuk.cordova.firebase;
 
 import android.util.Log;
+import android.net.Uri;
 
 import by.chemerisuk.cordova.support.CordovaMethod;
 import by.chemerisuk.cordova.support.ReflectiveCordovaPlugin;
@@ -9,6 +10,7 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.AuthCredential;
+import com.google.firebase.auth.EmailAuthProvider;
 import com.google.firebase.auth.FacebookAuthProvider;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -18,7 +20,9 @@ import com.google.firebase.auth.GoogleAuthProvider;
 import com.google.firebase.auth.PhoneAuthCredential;
 import com.google.firebase.auth.PhoneAuthProvider;
 import com.google.firebase.auth.TwitterAuthProvider;
+import com.google.firebase.auth.UserProfileChangeRequest;
 import com.google.firebase.FirebaseException;
+import com.google.firebase.auth.FirebaseAuthException;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
@@ -26,6 +30,8 @@ import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.apache.cordova.CordovaWebView;
+import org.apache.cordova.CordovaInterface;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -37,9 +43,11 @@ public class FirebaseAuthenticationPlugin extends ReflectiveCordovaPlugin implem
     private PhoneAuthProvider phoneAuthProvider;
     private CallbackContext signinCallback;
     private CallbackContext authStateCallback;
+    private FirebaseUser anonymousUser;
 
     @Override
-    protected void pluginInitialize() {
+    public void initialize(CordovaInterface cordova, CordovaWebView webView) {
+        super.initialize(cordova, webView);
         Log.d(TAG, "Starting Firebase Authentication plugin");
 
         this.firebaseAuth = FirebaseAuth.getInstance();
@@ -114,9 +122,15 @@ public class FirebaseAuthenticationPlugin extends ReflectiveCordovaPlugin implem
     @CordovaMethod
     private void signInAnonymously(CallbackContext callbackContext) {
         this.signinCallback = callbackContext;
-
+        OnCompleteListener plugin = this;
         firebaseAuth.signInAnonymously()
-            .addOnCompleteListener(cordova.getActivity(), this);
+            .addOnCompleteListener(cordova.getActivity(), new OnCompleteListener<AuthResult>() {
+                @Override
+                public void onComplete(Task<AuthResult> task) {
+                    anonymousUser = task.getResult().getUser();
+                    plugin.onComplete(task);
+                }
+            });
     }
 
     @CordovaMethod
@@ -225,7 +239,8 @@ public class FirebaseAuthenticationPlugin extends ReflectiveCordovaPlugin implem
             if (task.isSuccessful()) {
                 this.signinCallback.success(getProfileData(firebaseAuth.getCurrentUser()));
             } else {
-                this.signinCallback.error(task.getException().getMessage());
+                FirebaseAuthException e = (FirebaseAuthException)task.getException();
+                this.signinCallback.error(getExceptionData(e));
             }
 
             this.signinCallback = null;
@@ -241,7 +256,7 @@ public class FirebaseAuthenticationPlugin extends ReflectiveCordovaPlugin implem
             if (user != null) {
                 pluginResult = new PluginResult(PluginResult.Status.OK, getProfileData(user));
             } else {
-                pluginResult = new PluginResult(PluginResult.Status.OK, "");
+                pluginResult = new PluginResult(PluginResult.Status.OK, false);
             }
 
             pluginResult.setKeepCallback(true);
@@ -249,10 +264,23 @@ public class FirebaseAuthenticationPlugin extends ReflectiveCordovaPlugin implem
         }
     }
 
+    private static JSONObject getExceptionData(FirebaseAuthException exception) {
+        JSONObject result = new JSONObject();
+        try {
+            result.put("code", exception.getErrorCode());
+            result.put("message", exception.getMessage());
+        } catch (JSONException e) {
+            Log.e(TAG, "Fail to process getProfileData", e);
+        }
+        return result;
+    }
+
     private static JSONObject getProfileData(FirebaseUser user) {
         JSONObject result = new JSONObject();
 
         try {
+            // Fixes https://stackoverflow.com/questions/42881700/firebaseuser-isanonymous-always-returns-false-after-profile-update-firebase-1
+            Boolean isAnonymous = user.isAnonymous() || user.getProviders().size() == 0;
             result.put("uid", user.getUid());
             result.put("displayName", user.getDisplayName());
             result.put("email", user.getEmail());
@@ -260,10 +288,113 @@ public class FirebaseAuthenticationPlugin extends ReflectiveCordovaPlugin implem
             result.put("photoURL", user.getPhotoUrl());
             result.put("providerId", user.getProviderId());
             result.put("providerData", new JSONArray(user.getProviders()));
+            result.put("isAnonymous", isAnonymous);
         } catch (JSONException e) {
             Log.e(TAG, "Fail to process getProfileData", e);
         }
 
         return result;
+    }
+
+    @CordovaMethod
+    private void updateEmail(String email, CallbackContext callbackContext) {
+        FirebaseUser user = firebaseAuth.getCurrentUser();
+        user.updateEmail(email).addOnCompleteListener(cordova.getActivity(), new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(Task<Void> task) {
+                if (task.isSuccessful()) {
+                    callbackContext.success();
+                } else {
+                    FirebaseAuthException e = (FirebaseAuthException)task.getException();
+                    callbackContext.error(getExceptionData(e));
+                }
+            }
+        });
+    }
+
+    @CordovaMethod
+    private void changePassword(String password, CallbackContext callbackContext) {
+        FirebaseUser user = firebaseAuth.getCurrentUser();
+        user.updatePassword(password).addOnCompleteListener(cordova.getActivity(), new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(Task<Void> task) {
+                if (task.isSuccessful()) {
+                    callbackContext.success();
+                } else {
+                    FirebaseAuthException e = (FirebaseAuthException)task.getException();
+                    callbackContext.error(getExceptionData(e));
+                }
+            }
+        });
+    }
+
+    @CordovaMethod
+    private void updateProfile(String displayName, String photoURL, CallbackContext callbackContext) {
+        FirebaseUser user = firebaseAuth.getCurrentUser();
+        UserProfileChangeRequest.Builder profileUpdates = new UserProfileChangeRequest.Builder();
+        if (displayName != null) {
+            profileUpdates.setDisplayName(displayName);
+        }
+        if (photoURL != null) {
+            Uri photoUri = Uri.parse(photoURL);
+            profileUpdates.setPhotoUri(photoUri);
+        }
+        user.updateProfile(profileUpdates.build())
+                .addOnCompleteListener(new OnCompleteListener<Void>() {
+                    @Override
+                    public void onComplete(Task<Void> task) {
+                        if (task.isSuccessful()) {
+                            callbackContext.success();
+                        } else {
+                            callbackContext.error(task.getException().getMessage());
+                        }
+                    }
+                });
+    }
+
+    @CordovaMethod
+    private void currentUser(CallbackContext callbackContext) {
+        FirebaseUser user = firebaseAuth.getCurrentUser();
+        if (user != null) {
+            callbackContext.success(getProfileData(user));
+        } else {
+            callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, false));
+        }
+    }
+
+    @CordovaMethod
+    private void deleteCurrentAnonymousUser(CallbackContext callbackContext) {
+        // Not implemented
+        // Firebase Android SDK doesn't seem to allow to delete user that is no longer signed in
+        callbackContext.success();
+        /*
+        anonymousUser.delete().addOnCompleteListener(cordova.getActivity(), new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(Task<Void> task) {
+                if (task.isSuccessful()) {
+                    callbackContext.success();
+                } else {
+                    callbackContext.error(task.getException().getMessage());
+                }
+            }
+        });
+        */
+    }
+
+    @CordovaMethod
+    private void reauthenticateWithCredential(String email, String password, CallbackContext callbackContext) {
+        FirebaseUser user = firebaseAuth.getCurrentUser();
+        AuthCredential credential = EmailAuthProvider.getCredential(email, password);
+        user.reauthenticate(credential)
+            .addOnCompleteListener(new OnCompleteListener<Void>() {
+                @Override
+                public void onComplete(Task<Void> task) {
+                    if (task.isSuccessful()) {
+                        callbackContext.success();
+                    } else {
+                        callbackContext.error(task.getException().getMessage());
+                    }
+                }
+            });
     }
 }
