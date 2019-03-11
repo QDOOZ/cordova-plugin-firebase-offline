@@ -23,12 +23,17 @@ xmlns:android="http://schemas.android.com/apk/res/android"
         <js-module name="FirebaseAuthentication" src="www/FirebaseAuthentication.js">
         <merges target="cordova.plugins.firebaseOffline.auth" />
     </js-module>
+    <js-module src="www/FCMPlugin.js" name="FCMPlugin">
+	    <clobbers target="FCMPlugin" />
+        <merges target="cordova.plugins.firebaseOffline.pushNotifications" />
+    </js-module>
 
     <preference name="APP_DOMAIN" />
     <preference name="PAGE_LINK_DOMAIN" />
 
     <platform name="android">
         <preference name="FIREBASE_VERSION" default="16.+"/>
+        <preference name="FIREBASE_MESSAGING_VERSION" default="17.3.3"/>
 
         <config-file parent="/*" target="res/xml/config.xml">
             <feature name="FirebaseDynamicLinks">
@@ -59,9 +64,40 @@ xmlns:android="http://schemas.android.com/apk/res/android"
             </intent-filter>
         </config-file>
 
+
+        <config-file target="AndroidManifest.xml" parent="/manifest/application">
+            <activity android:exported="true" android:name="com.gae.scaffolder.plugin.FCMPluginActivity" android:launchMode="singleTop">
+                <intent-filter>
+                    <action android:name="FCM_PLUGIN_ACTIVITY" />
+                    <category android:name="android.intent.category.DEFAULT" />
+                </intent-filter>
+            </activity>
+            <service android:name="com.gae.scaffolder.plugin.MyFirebaseMessagingService">
+                <intent-filter>
+                    <action android:name="com.google.firebase.MESSAGING_EVENT"/>
+                </intent-filter>
+            </service>
+            <service android:name="com.gae.scaffolder.plugin.MyFirebaseInstanceIDService">
+                <intent-filter>
+                    <action android:name="com.google.firebase.INSTANCE_ID_EVENT"/>
+                </intent-filter>
+            </service>
+        </config-file>
+        <config-file target="res/xml/config.xml" parent="/*">
+            <feature name="FCMPlugin" >
+                    <param name="android-package" value="com.gae.scaffolder.plugin.FCMPlugin"/>
+                    <param name="onload" value="true" />
+                </feature>
+        </config-file>
+
         <source-file src="src/android/FirebaseDynamicLinksPlugin.java" target-dir="src/by/chemerisuk/cordova/firebase" />
         <source-file src="src/android/FirebaseDatabasePlugin.java" target-dir="src/by/chemerisuk/cordova/firebase" />
         <source-file src="src/android/FirebaseAuthenticationPlugin.java" target-dir="src/by/chemerisuk/cordova/firebase/" />
+
+		<source-file src="src/android/FCMPlugin.java" target-dir="src/com/gae/scaffolder/plugin" />
+		<source-file src="src/android/MyFirebaseMessagingService.java" target-dir="src/com/gae/scaffolder/plugin" />
+		<source-file src="src/android/MyFirebaseInstanceIDService.java" target-dir="src/com/gae/scaffolder/plugin" />
+		<source-file src="src/android/FCMPluginActivity.java" target-dir="src/com/gae/scaffolder/plugin" />
 
         <dependency id="cordova-support-android-plugin" version="~1.0.0"/>
         <dependency id="cordova-support-google-services" version="~1.2.0"/>
@@ -70,7 +106,9 @@ xmlns:android="http://schemas.android.com/apk/res/android"
         <framework src="com.google.firebase:firebase-dynamic-links:$FIREBASE_VERSION" />
         <framework src="com.google.firebase:firebase-database:$FIREBASE_VERSION" />
         <framework src="com.google.firebase:firebase-auth:$FIREBASE_VERSION" />
+        <framework src="com.google.firebase:firebase-messaging:$FIREBASE_MESSAGING_VERSION" />
 
+		<framework src="src/android/FCMPlugin.gradle" custom="true" type="gradleReference"/>
         <framework src="com.google.code.gson:gson:2+"/>
     </platform>
 
@@ -87,6 +125,9 @@ xmlns:android="http://schemas.android.com/apk/res/android"
             <feature name="FirebaseAuthentication">
                 <param name="ios-package" value="FirebaseAuthenticationPlugin" />
                 <param name="onload" value="true" />
+            </feature>
+            <feature name="FCMPlugin">
+                <param name="ios-package" value="FCMPlugin"/>
             </feature>
         </config-file>
 
@@ -118,15 +159,18 @@ xmlns:android="http://schemas.android.com/apk/res/android"
                 <string>applinks:$PAGE_LINK_DOMAIN</string>
             </array>
         </config-file>
-
         <header-file src="src/ios/AppDelegate+FirebaseDynamicLinksPlugin.h" />
         <source-file src="src/ios/AppDelegate+FirebaseDynamicLinksPlugin.m" />
+		<header-file src="src/ios/AppDelegate+FCMPlugin.h" />
+		<source-file src="src/ios/AppDelegate+FCMPlugin.m" />
         <header-file src="src/ios/FirebaseDynamicLinksPlugin.h" />
         <source-file src="src/ios/FirebaseDynamicLinksPlugin.m" />
         <header-file src="src/ios/FirebaseDatabasePlugin.h" />
         <source-file src="src/ios/FirebaseDatabasePlugin.m" />
         <header-file src="src/ios/FirebaseAuthenticationPlugin.h" />
         <source-file src="src/ios/FirebaseAuthenticationPlugin.m" />
+        <header-file src="src/ios/FCMPlugin.h" />
+        <source-file src="src/ios/FCMPlugin.m" />
 
         <header-file src="src/ios/Firebase/Firebase.h" />
         
@@ -143,6 +187,18 @@ xmlns:android="http://schemas.android.com/apk/res/android"
 		<framework custom="true" src="src/ios/Firebase/Database/leveldb-library.framework" />
         <framework custom="true" src="src/ios/Firebase/Auth/GTMSessionFetcher.framework" />
 		<framework custom="true" src="src/ios/Firebase/Auth/FirebaseAuth.framework" />
+		<framework custom="true" src="src/ios/Firebase/Messaging/FirebaseMessaging.framework" />
+		<framework custom="true" src="src/ios/Firebase/Messaging/Protobuf.framework" />
+		<framework custom="true" src="src/ios/Firebase/Messaging/GoogleToolboxForMac.framework" />
+		<framework custom="true" src="src/ios/Firebase/Messaging/GoogleInterchangeUtilities.framework"  />
+		<framework custom="true" src="src/ios/Firebase/Messaging/GoogleSymbolUtilities.framework"  />
+
+		<framework src="libc++.tbd" />
+		<framework src="libz.tbd" />
+		<framework src="AddressBook.framework" />
+		<framework src="libsqlite3.0.tbd" />
+		<framework src="libz.tbd" />
+		<framework src="Security.framework" />
     </platform>
 
 </plugin>
