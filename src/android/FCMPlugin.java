@@ -25,6 +25,7 @@ public class FCMPlugin extends CordovaPlugin {
 	public static String notificationCallBack = "FCMPlugin.onNotificationReceived";
 	public static String tokenRefreshCallBack = "FCMPlugin.onTokenRefreshReceived";
 	public static Boolean notificationCallBackReady = false;
+	public static Boolean jsPluginReady = false;
 	public static Map<String, Object> lastPush = null;
 	 
 	public FCMPlugin() {}
@@ -46,6 +47,7 @@ public class FCMPlugin extends CordovaPlugin {
 			if (action.equals("ready")) {
 				//
 				callbackContext.success();
+				jsPluginReady = true;
 			}
 			// GET TOKEN //
 			else if (action.equals("getToken")) {
@@ -90,6 +92,18 @@ public class FCMPlugin extends CordovaPlugin {
 					public void run() {
 						try{
 							FirebaseMessaging.getInstance().unsubscribeFromTopic( args.getString(0) );
+							callbackContext.success();
+						}catch(Exception e){
+							callbackContext.error(e.getMessage());
+						}
+					}
+				});
+			}
+			else if (action.equals("revokeToken")) {
+				cordova.getThreadPool().execute(new Runnable() {
+					public void run() {
+						try{
+							FirebaseInstanceId.getInstance().deleteInstanceId();
 							callbackContext.success();
 						}catch(Exception e){
 							callbackContext.error(e.getMessage());
@@ -146,8 +160,11 @@ public class FCMPlugin extends CordovaPlugin {
 	}
 
 	public static void sendTokenRefresh(String token) {
-		Log.d(TAG, "==> FCMPlugin sendRefreshToken");
+	  Log.d(TAG, "==> FCMPlugin sendRefreshToken");
 	  try {
+		  	if (!jsPluginReady) {
+				return;
+			}
 			String callBack = "javascript:" + tokenRefreshCallBack + "('" + token + "')";
 			gWebView.sendJavascript(callBack);
 		} catch (Exception e) {

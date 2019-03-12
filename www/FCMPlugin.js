@@ -14,7 +14,7 @@ FCMPlugin.prototype.unsubscribeFromTopic = function( topic, success, error ){
 }
 // NOTIFICATION CALLBACK //
 FCMPlugin.prototype.onNotification = function( callback, success, error ){
-	Object.getPrototypeOf(this).onNotificationReceived = callback;
+	FCMPlugin.prototype.onNotificationReceived = callback;
 	exec(success, error, "FCMPlugin", 'registerNotification',[]);
 }
 // TOKEN REFRESH CALLBACK //
@@ -35,6 +35,11 @@ FCMPlugin.prototype.onNotificationReceived = function(payload){
 FCMPlugin.prototype.onTokenRefreshReceived = function(token){
 	console.log("Received token refresh")
 	console.log(token)
+}
+FCMPlugin.prototype.revokeToken = function(){
+	return new Promise(function(resolve, reject) {
+		exec(resolve, reject, "FCMPlugin", 'revokeToken', []);
+	})
 }
 // FIRE READY //
 exec(function(result){ console.log("FCMPlugin Ready OK") }, function(result){ console.log("FCMPlugin Ready ERROR") }, "FCMPlugin",'ready',[]);

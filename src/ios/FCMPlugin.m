@@ -89,6 +89,23 @@ static FCMPlugin *fcmPluginInstance;
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
+// GET TOKEN //
+- (void) revokeToken:(CDVInvokedUrlCommand *)command 
+{
+    NSLog(@"revokeToken");
+    [self.commandDelegate runInBackground:^{
+        [[FIRInstanceID instanceID] deleteIDWithHandler:^(NSError *  _Nullable error) {
+            CDVPluginResult *pluginResult;
+            if (error) {
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:error.localizedDescription];
+            } else {
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+            }
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+        }];
+    }];
+}
+
 -(void) notifyOfMessage:(NSData *)payload
 {
     NSString *JSONString = [[NSString alloc] initWithBytes:[payload bytes] length:[payload length] encoding:NSUTF8StringEncoding];
