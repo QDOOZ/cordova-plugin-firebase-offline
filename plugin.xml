@@ -45,6 +45,10 @@ xmlns:android="http://schemas.android.com/apk/res/android"
             <feature name="FirebaseAuthentication">
                 <param name="android-package" value="by.chemerisuk.cordova.firebase.FirebaseAuthenticationPlugin" />
             </feature>
+            <feature name="FCMPlugin" >
+                <param name="android-package" value="com.gae.scaffolder.plugin.FCMPlugin"/>
+                <param name="onload" value="true" />
+            </feature>
         </config-file>
 
         <config-file target="AndroidManifest.xml" parent="/manifest/application/activity">
@@ -82,12 +86,6 @@ xmlns:android="http://schemas.android.com/apk/res/android"
                     <action android:name="com.google.firebase.INSTANCE_ID_EVENT"/>
                 </intent-filter>
             </service>
-        </config-file>
-        <config-file target="res/xml/config.xml" parent="/*">
-            <feature name="FCMPlugin" >
-                    <param name="android-package" value="com.gae.scaffolder.plugin.FCMPlugin"/>
-                    <param name="onload" value="true" />
-                </feature>
         </config-file>
 
         <source-file src="src/android/FirebaseDynamicLinksPlugin.java" target-dir="src/by/chemerisuk/cordova/firebase" />
@@ -159,6 +157,12 @@ xmlns:android="http://schemas.android.com/apk/res/android"
                 <string>applinks:$PAGE_LINK_DOMAIN</string>
             </array>
         </config-file>
+		<config-file target="*/Entitlements-Debug.plist" parent="aps-environment" >
+		    <string>development</string>
+		</config-file>
+		<config-file target="*/Entitlements-Release.plist" parent="aps-environment" >
+			<string>production</string>
+		</config-file>
         <header-file src="src/ios/AppDelegate+FirebaseDynamicLinksPlugin.h" />
         <source-file src="src/ios/AppDelegate+FirebaseDynamicLinksPlugin.m" />
 		<header-file src="src/ios/AppDelegate+FCMPlugin.h" />
