@@ -72,6 +72,13 @@
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
+- (void)setDefaults:(CDVInvokedUrlCommand *)command {
+    NSDictionary *values = [command argumentAtIndex:0 withDefault:@{} andClass:[NSDictionary class]];
+    [self.remoteConfig setDefaults:values];
+    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
 - (FIRRemoteConfigValue*)getConfigValue:(CDVInvokedUrlCommand *)command {
     NSString* key = [command argumentAtIndex:0];
     NSString* namespace = [command argumentAtIndex:1];

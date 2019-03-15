@@ -24,5 +24,10 @@ module.exports = {
     },
     getBytes: function(key, namespace) {
         return promiseParameter("Bytes", key, namespace);
+    },
+    setDefaults: function (defaults, namespace) {
+        return new Promise(function(resolve, reject) {
+            exec(resolve, reject, PLUGIN_NAME, "setDefaults", [defaults, namespace || ""]);
+        });
     }
 };

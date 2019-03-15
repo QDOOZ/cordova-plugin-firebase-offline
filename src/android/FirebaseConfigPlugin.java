@@ -4,6 +4,7 @@ import java.util.Collections;
 
 import android.content.Context;
 import android.util.Log;
+import android.util.Base64;
 
 import by.chemerisuk.cordova.support.CordovaMethod;
 import by.chemerisuk.cordova.support.ReflectiveCordovaPlugin;
@@ -18,6 +19,15 @@ import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
 
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+
+
 public class FirebaseConfigPlugin extends ReflectiveCordovaPlugin {
     private static final String TAG = "FirebaseConfigPlugin";
 
@@ -30,11 +40,7 @@ public class FirebaseConfigPlugin extends ReflectiveCordovaPlugin {
         this.firebaseRemoteConfig = FirebaseRemoteConfig.getInstance();
 
         String filename = preferences.getString("FirebaseRemoteConfigDefaults", "");
-        if (filename.isEmpty()) {
-            // always call setDefaults in order to avoid exception
-            // https://github.com/firebase/quickstart-android/issues/291
-            this.firebaseRemoteConfig.setDefaults(Collections.<String, Object>emptyMap());
-        } else {
+        if (!filename.isEmpty()) {
             Context ctx = cordova.getActivity().getApplicationContext();
             int resourceId = ctx.getResources().getIdentifier(filename, "xml", ctx.getPackageName());
             this.firebaseRemoteConfig.setDefaults(resourceId);
@@ -65,6 +71,60 @@ public class FirebaseConfigPlugin extends ReflectiveCordovaPlugin {
                     }
                 }
             });
+    }
+
+    private static Map<String, Object> defaultsToMap(JSONObject object) throws JSONException {
+        final Map<String, Object> map = new HashMap<String, Object>();
+
+        for (Iterator<String> keys = object.keys(); keys.hasNext(); ) {
+            String key = keys.next();
+            Object value = object.get(key);
+
+            if (value instanceof Integer) {
+                //setDefaults() should take Longs
+                value = new Long((Integer) value);
+            } else if (value instanceof JSONArray) {
+                JSONArray array = (JSONArray) value;
+                if (array.length() == 1 && array.get(0) instanceof String) {
+                    //parse byte[] as Base64 String
+                    value = Base64.decode(array.getString(0), Base64.DEFAULT);
+                } else {
+                    //parse byte[] as numeric array
+                    byte[] bytes = new byte[array.length()];
+                    for (int i = 0; i < array.length(); i++)
+                        bytes[i] = (byte) array.getInt(i);
+                    value = bytes;
+                }
+            }
+
+            map.put(key, value);
+        }
+        return map;
+    }
+
+    private void setDefaults(final CallbackContext callbackContext, final JSONObject defaults, final String namespace) {
+        cordova.getThreadPool().execute(new Runnable() {
+            public void run() {
+                try {
+                    if (namespace == null)
+                        firebaseRemoteConfig.setDefaults(defaultsToMap(defaults));
+                    else
+                        firebaseRemoteConfig.setDefaults(defaultsToMap(defaults), namespace);
+                    callbackContext.success();
+                } catch (Exception e) {
+                    callbackContext.error(e.getMessage());
+                }
+            }
+        });
+    }
+
+    @CordovaMethod
+    protected void setDefaults(JSONObject defaults, String namespace, CallbackContext callbackContext) {
+        if (namespace != null && namespace.length() > 0) {
+            this.setDefaults(callbackContext, defaults, namespace);
+        } else {
+            this.setDefaults(callbackContext, defaults, null);
+        }
     }
 
     @CordovaMethod
