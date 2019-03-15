@@ -7,6 +7,10 @@
 #import "FCMPlugin.h"
 #import "Firebase.h"
 
+#if defined(__IPHONE_10_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_10_0
+@import UserNotifications;
+#endif
+
 @interface FCMPlugin () {}
 @end
 
@@ -104,6 +108,75 @@ static FCMPlugin *fcmPluginInstance;
             [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
         }];
     }];
+}
+
+- (void)requestPermission:(CDVInvokedUrlCommand *)command {
+    
+    // Register for remote notifications. This shows a permission dialog on first run, to
+    // show the dialog at a more appropriate time move this registration accordingly.
+    if (floor(NSFoundationVersionNumber) <= NSFoundationVersionNumber_iOS_7_1) {
+        // iOS 7.1 or earlier. Disable the deprecation warnings.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        UIRemoteNotificationType allNotificationTypes =
+        (UIRemoteNotificationTypeSound |
+         UIRemoteNotificationTypeAlert |
+         UIRemoteNotificationTypeBadge);
+        UIApplication *application = [UIApplication sharedApplication];
+        [application registerForRemoteNotificationTypes:allNotificationTypes];
+        CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+#pragma clang diagnostic pop
+    } else {
+        // iOS 8 or later
+        // [START register_for_notifications]
+        if (floor(NSFoundationVersionNumber) <= NSFoundationVersionNumber_iOS_9_x_Max) {
+            UIUserNotificationType allNotificationTypes =
+            (UIUserNotificationTypeSound | UIUserNotificationTypeAlert | UIUserNotificationTypeBadge);
+            UIUserNotificationSettings *settings =
+            [UIUserNotificationSettings settingsForTypes:allNotificationTypes categories:nil];
+            [[UIApplication sharedApplication] registerUserNotificationSettings:settings];
+            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+        } else {
+            // iOS 10 or later
+#if defined(__IPHONE_10_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_10_0
+            UNAuthorizationOptions authOptions =
+            UNAuthorizationOptionAlert
+            | UNAuthorizationOptionSound
+            | UNAuthorizationOptionBadge;
+            [[UNUserNotificationCenter currentNotificationCenter] requestAuthorizationWithOptions:authOptions completionHandler:^(BOOL granted, NSError * _Nullable error) {
+                dispatch_sync(dispatch_get_main_queue(), ^{
+                    NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:1];
+                    [message setObject:[NSNumber numberWithBool:granted] forKey:@"isEnabled"];
+                    CDVPluginResult *commandResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+                    [self.commandDelegate sendPluginResult:commandResult callbackId:command.callbackId];
+                });
+            }];
+#endif
+        }
+    }
+
+    return;
+}
+
+- (void)hasPermission:(CDVInvokedUrlCommand *)command {
+    BOOL enabled = NO;
+    UIApplication *application = [UIApplication sharedApplication];
+
+    if ([[UIApplication sharedApplication] respondsToSelector:@selector(registerUserNotificationSettings:)]) {
+        enabled = application.currentUserNotificationSettings.types != UIUserNotificationTypeNone;
+    } else {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        enabled = application.enabledRemoteNotificationTypes != UIRemoteNotificationTypeNone;
+#pragma GCC diagnostic pop
+    }
+
+    NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:1];
+    [message setObject:[NSNumber numberWithBool:enabled] forKey:@"isEnabled"];
+    CDVPluginResult *commandResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+    [self.commandDelegate sendPluginResult:commandResult callbackId:command.callbackId];
 }
 
 -(void) notifyOfMessage:(NSData *)payload
