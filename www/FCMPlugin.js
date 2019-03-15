@@ -41,6 +41,17 @@ FCMPlugin.prototype.revokeToken = function(){
 		exec(resolve, reject, "FCMPlugin", 'revokeToken', []);
 	})
 }
+// Show the permission pop-up on iOS,
+FCMPlugin.prototype.requestPermissionsOnIOS = function(success, error) {
+	return new Promise(function(resolve, reject) {
+		exec(resolve, reject, "FCMPlugin", 'requestPermission', []);
+	})
+};
+FCMPlugin.prototype.hasPermissionsOnIOS = function () {
+	return new Promise(function(resolve, reject) {
+		exec(resolve, reject, "FCMPlugin", "hasPermission", []);
+	})
+};
 // FIRE READY //
 exec(function(result){ console.log("FCMPlugin Ready OK") }, function(result){ console.log("FCMPlugin Ready ERROR") }, "FCMPlugin",'ready',[]);
 
