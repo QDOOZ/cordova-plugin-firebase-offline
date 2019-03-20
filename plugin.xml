@@ -20,8 +20,11 @@ xmlns:android="http://schemas.android.com/apk/res/android"
     <js-module name="FirebaseDatabase" src="www/FirebaseDatabase.js">
         <merges target="cordova.plugins.firebaseOffline.database" />
     </js-module>
-        <js-module name="FirebaseAuthentication" src="www/FirebaseAuthentication.js">
+    <js-module name="FirebaseAuthentication" src="www/FirebaseAuthentication.js">
         <merges target="cordova.plugins.firebaseOffline.auth" />
+    </js-module>
+    <js-module name="FirebaseConfig" src="www/FirebaseConfig.js">
+        <merges target="cordova.plugins.firebaseOffline.config" />
     </js-module>
     <js-module src="www/FCMPlugin.js" name="FCMPlugin">
 	    <clobbers target="FCMPlugin" />
@@ -48,6 +51,9 @@ xmlns:android="http://schemas.android.com/apk/res/android"
             <feature name="FCMPlugin" >
                 <param name="android-package" value="com.gae.scaffolder.plugin.FCMPlugin"/>
                 <param name="onload" value="true" />
+            </feature>
+            <feature name="FirebaseConfig">
+                <param name="android-package" value="by.chemerisuk.cordova.firebase.FirebaseConfigPlugin" />
             </feature>
         </config-file>
 
@@ -91,6 +97,7 @@ xmlns:android="http://schemas.android.com/apk/res/android"
         <source-file src="src/android/FirebaseDynamicLinksPlugin.java" target-dir="src/by/chemerisuk/cordova/firebase" />
         <source-file src="src/android/FirebaseDatabasePlugin.java" target-dir="src/by/chemerisuk/cordova/firebase" />
         <source-file src="src/android/FirebaseAuthenticationPlugin.java" target-dir="src/by/chemerisuk/cordova/firebase/" />
+        <source-file src="src/android/FirebaseConfigPlugin.java" target-dir="src/by/chemerisuk/cordova/firebase/" />
 
 		<source-file src="src/android/FCMPlugin.java" target-dir="src/com/gae/scaffolder/plugin" />
 		<source-file src="src/android/MyFirebaseMessagingService.java" target-dir="src/com/gae/scaffolder/plugin" />
@@ -104,6 +111,7 @@ xmlns:android="http://schemas.android.com/apk/res/android"
         <framework src="com.google.firebase:firebase-dynamic-links:$FIREBASE_VERSION" />
         <framework src="com.google.firebase:firebase-database:$FIREBASE_VERSION" />
         <framework src="com.google.firebase:firebase-auth:$FIREBASE_VERSION" />
+        <framework src="com.google.firebase:firebase-config:$FIREBASE_VERSION" />
         <framework src="com.google.firebase:firebase-messaging:$FIREBASE_MESSAGING_VERSION" />
 
 		<framework src="src/android/FCMPlugin.gradle" custom="true" type="gradleReference"/>
@@ -126,6 +134,9 @@ xmlns:android="http://schemas.android.com/apk/res/android"
             </feature>
             <feature name="FCMPlugin">
                 <param name="ios-package" value="FCMPlugin"/>
+            </feature>
+            <feature name="FirebaseConfig">
+                <param name="ios-package" value="FirebaseConfigPlugin" />
             </feature>
         </config-file>
 
@@ -175,6 +186,8 @@ xmlns:android="http://schemas.android.com/apk/res/android"
         <source-file src="src/ios/FirebaseAuthenticationPlugin.m" />
         <header-file src="src/ios/FCMPlugin.h" />
         <source-file src="src/ios/FCMPlugin.m" />
+        <header-file src="src/ios/FirebaseConfigPlugin.h" />
+        <source-file src="src/ios/FirebaseConfigPlugin.m" />
 
         <header-file src="src/ios/Firebase/Firebase.h" />
         
@@ -196,6 +209,8 @@ xmlns:android="http://schemas.android.com/apk/res/android"
 		<framework custom="true" src="src/ios/Firebase/Messaging/GoogleToolboxForMac.framework" />
 		<framework custom="true" src="src/ios/Firebase/Messaging/GoogleInterchangeUtilities.framework"  />
 		<framework custom="true" src="src/ios/Firebase/Messaging/GoogleSymbolUtilities.framework"  />
+		<framework custom="true" src="src/ios/Firebase/RemoteConfig/FirebaseRemoteConfig.framework"  />
+		<framework custom="true" src="src/ios/Firebase/RemoteConfig/FirebaseABTesting.framework"  />
 
 		<framework src="libc++.tbd" />
 		<framework src="libz.tbd" />
