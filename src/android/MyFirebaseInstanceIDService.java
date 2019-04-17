@@ -4,11 +4,13 @@ import android.util.Log;
 
 import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.iid.FirebaseInstanceIdService;
+import io.intercom.android.sdk.push.IntercomPushClient;
 
 /**
  * Created by Felipe Echanique on 08/06/2016.
  */
 public class MyFirebaseInstanceIDService extends FirebaseInstanceIdService {
+    private final IntercomPushClient intercomPushClient = new IntercomPushClient();
 
     private static final String TAG = "FCMPlugin";
 
@@ -16,6 +18,7 @@ public class MyFirebaseInstanceIDService extends FirebaseInstanceIdService {
     public void onTokenRefresh(){
         // Get updated InstanceID token.
         String refreshedToken = FirebaseInstanceId.getInstance().getToken();
+        intercomPushClient.sendTokenToIntercom(getApplication(), refreshedToken);
         Log.d(TAG, "Refreshed token: " + refreshedToken);
 		FCMPlugin.sendTokenRefresh( refreshedToken );
 
