@@ -17,9 +17,15 @@ import com.google.firebase.messaging.RemoteMessage;
 /**
  * Created by Felipe Echanique on 08/06/2016.
  */
+
+
+import io.intercom.android.sdk.push.IntercomPushClient;
+import java.util.Map;
+
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private static final String TAG = "FCMPlugin";
+    private final IntercomPushClient intercomPushClient = new IntercomPushClient();
 
     /**
      * Called when message is received.
@@ -29,6 +35,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     // [START receive_message]
     @Override
     public void onMessageReceived(RemoteMessage remoteMessage) {
+        Log.d(TAG, "==> MyFirebaseMessagingService onMessageReceived");
+        Map message = remoteMessage.getData();
+        if (intercomPushClient.isIntercomPush(message)) {
+            intercomPushClient.handlePush(getApplication(), message);
+            return;
+        }
         // TODO(developer): Handle FCM messages here.
         // If the application is in the foreground handle both data and notification messages here.
         // Also if you intend on generating your own notifications as a result of a received FCM
