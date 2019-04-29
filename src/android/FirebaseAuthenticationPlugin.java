@@ -292,7 +292,7 @@ public class FirebaseAuthenticationPlugin extends ReflectiveCordovaPlugin implem
             result.put("providerId", user.getProviderId());
             result.put("providerData", new JSONArray(user.getProviders()));
             result.put("isAnonymous", isAnonymous);
-            result.put("emailVerfied", user.getEmailVerified());
+            result.put("emailVerified", user.isEmailVerified());
         } catch (JSONException e) {
             Log.e(TAG, "Fail to process getProfileData", e);
         }
@@ -377,7 +377,7 @@ public class FirebaseAuthenticationPlugin extends ReflectiveCordovaPlugin implem
                         callbackContext.error(task.getException().getMessage());
                     }
                 }
-            })
+            });
         } else {
             callbackContext.success();
         }
