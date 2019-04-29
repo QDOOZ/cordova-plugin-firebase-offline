@@ -292,6 +292,7 @@ public class FirebaseAuthenticationPlugin extends ReflectiveCordovaPlugin implem
             result.put("providerId", user.getProviderId());
             result.put("providerData", new JSONArray(user.getProviders()));
             result.put("isAnonymous", isAnonymous);
+            result.put("emailVerfied", user.getEmailVerified());
         } catch (JSONException e) {
             Log.e(TAG, "Fail to process getProfileData", e);
         }
@@ -360,6 +361,25 @@ public class FirebaseAuthenticationPlugin extends ReflectiveCordovaPlugin implem
             callbackContext.success(getProfileData(user));
         } else {
             callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, false));
+        }
+    }
+
+    @CordovaMethod
+    private void reload(CallbackContext callbackContext) {
+        FirebaseUser user = firebaseAuth.getCurrentUser();
+        if (user != null) {
+            user.reload().addOnCompleteListener(cordova.getActivity(), new OnCompleteListener<Void>() {
+                @Override
+                public void onComplete(Task<Void> task) {
+                    if (task.isSuccessful()) {
+                        callbackContext.success();
+                    } else {
+                        callbackContext.error(task.getException().getMessage());
+                    }
+                }
+            })
+        } else {
+            callbackContext.success();
         }
     }
 
