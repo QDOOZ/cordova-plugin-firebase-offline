@@ -331,6 +331,26 @@ static FIRUser* anonymousUser;
     }];
 }
 
+- (void)reload:(CDVInvokedUrlCommand *)command {
+    FIRUser *user = [FIRAuth auth].currentUser;
+
+    if (user) {
+        [user reloadWithCompletion:^(NSError *_Nullable error) {
+            CDVPluginResult *pluginResult;
+            if (error) {
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:[self exceptionToDictionary:error]];
+            } else {
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+            }
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+        }];
+    } else {
+        CDVPluginResult *pluginResult;
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    }
+}
+
 - (NSDictionary*)userToDictionary:(FIRUser *)user {
     NSArray<id<FIRUserInfo>> *providerData = user.providerData;
     return @{
@@ -341,7 +361,8 @@ static FIRUser* anonymousUser;
         @"phoneNumber": user.phoneNumber ? user.phoneNumber : @"",
         @"photoURL": user.photoURL ? user.photoURL.absoluteString : @"",
         @"providerData": (providerData == nil || [providerData count] == 0) ? @[] : @[providerData[0].providerID],
-        @"isAnonymous": user.isAnonymous ? @YES : @NO
+        @"isAnonymous": user.isAnonymous ? @YES : @NO,
+        @"emailVerified": user.emailVerified ? @YES : @NO
     };
 }
 
