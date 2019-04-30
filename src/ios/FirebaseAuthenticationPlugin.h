@@ -23,6 +23,7 @@
 - (void)updateProfile:(CDVInvokedUrlCommand*)command;
 - (void)deleteCurrentAnonymousUser:(CDVInvokedUrlCommand*)command;
 - (void)currentUser:(CDVInvokedUrlCommand*)command;
+- (void)reloadCurrentUser:(CDVInvokedUrlCommand*)command;
 
 @property(strong, nonatomic) FIRAuthStateDidChangeListenerHandle handle;
 

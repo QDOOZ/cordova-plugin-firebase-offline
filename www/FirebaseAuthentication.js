@@ -110,5 +110,10 @@ module.exports = {
         return new Promise(function(resolve, reject) {
             exec(resolve, reject, PLUGIN_NAME, "reauthenticateWithCredential", [email, password]);
         });
+    },
+    reloadCurrentUser: function() {
+        return new Promise(function(resolve, reject) {
+            exec(resolve, reject, PLUGIN_NAME, "reloadCurrentUser", [])
+        });
     }
 };
