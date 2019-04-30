@@ -331,7 +331,7 @@ static FIRUser* anonymousUser;
     }];
 }
 
-- (void)reload:(CDVInvokedUrlCommand *)command {
+- (void)reloadCurrentUser:(CDVInvokedUrlCommand *)command {
     FIRUser *user = [FIRAuth auth].currentUser;
 
     if (user) {

@@ -365,7 +365,7 @@ public class FirebaseAuthenticationPlugin extends ReflectiveCordovaPlugin implem
     }
 
     @CordovaMethod
-    private void reload(CallbackContext callbackContext) {
+    private void reloadCurrentUser(CallbackContext callbackContext) {
         FirebaseUser user = firebaseAuth.getCurrentUser();
         if (user != null) {
             user.reload().addOnCompleteListener(cordova.getActivity(), new OnCompleteListener<Void>() {
