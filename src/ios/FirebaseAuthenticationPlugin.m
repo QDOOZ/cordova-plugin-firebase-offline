@@ -229,10 +229,12 @@ static FIRUser* anonymousUser;
         dispatch_async(dispatch_get_main_queue(), ^{
             CDVPluginResult *pluginResult;
             if (user) {
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:[self userToDictionary:user]];
                 if (user.isAnonymous) {
                     anonymousUser = user;
+                } else {
+                    [self setAnalyticsUserId:user];
                 }
-                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:[self userToDictionary:user]];
             } else {
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
             }
@@ -371,6 +373,11 @@ static FIRUser* anonymousUser;
          @"code": @(error.code),
          @"message": error.localizedDescription
      };
+}
+
+- (void)setAnalyticsUserId:(FIRUser *)user {
+    [FIRAnalytics setUserID:user.uid];
+    [FIRAnalytics setUserPropertyString:user.uid forName:@"userId"];
 }
 
 @end
