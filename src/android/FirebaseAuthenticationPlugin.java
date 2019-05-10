@@ -23,6 +23,7 @@ import com.google.firebase.auth.TwitterAuthProvider;
 import com.google.firebase.auth.UserProfileChangeRequest;
 import com.google.firebase.FirebaseException;
 import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.analytics.FirebaseAnalytics;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
@@ -32,7 +33,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.CordovaInterface;
-
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 
@@ -44,7 +44,7 @@ public class FirebaseAuthenticationPlugin extends ReflectiveCordovaPlugin implem
     private CallbackContext signinCallback;
     private CallbackContext authStateCallback;
     private FirebaseUser anonymousUser;
-
+    private FirebaseAnalytics mFirebaseAnalytics = null;
     @Override
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
         super.initialize(cordova, webView);
@@ -52,6 +52,7 @@ public class FirebaseAuthenticationPlugin extends ReflectiveCordovaPlugin implem
 
         this.firebaseAuth = FirebaseAuth.getInstance();
         this.phoneAuthProvider = PhoneAuthProvider.getInstance();
+        this.mFirebaseAnalytics = FirebaseAnalytics.getInstance(this.cordova.getContext());
     }
 
     @CordovaMethod
@@ -254,6 +255,9 @@ public class FirebaseAuthenticationPlugin extends ReflectiveCordovaPlugin implem
 
             if (user != null) {
                 pluginResult = new PluginResult(PluginResult.Status.OK, getProfileData(user));
+                if (!user.isAnonymous()) {
+                    this.setAnalyticsUserId(user);
+                }
             } else {
                 pluginResult = new PluginResult(PluginResult.Status.OK, false);
             }
@@ -417,5 +421,11 @@ public class FirebaseAuthenticationPlugin extends ReflectiveCordovaPlugin implem
                     }
                 }
             });
+    }
+    private void setAnalyticsUserId(FirebaseUser user) {
+        if (mFirebaseAnalytics != null) {
+            mFirebaseAnalytics.setUserId(user.getUid());
+            mFirebaseAnalytics.setUserProperty("userId", user.getUid());
+        }
     }
 }
