@@ -81,6 +81,10 @@ static NSString *const CUSTOM_URL_PREFIX_TO_IGNORE = @"/__/auth/callback";
                   annotation:options[UIApplicationOpenURLOptionsAnnotationKey]];
 }
 
+static id orNull(id obj) {
+    return obj ?: [NSNull null];
+}
+
 - (BOOL)application:(UIApplication *)application
             openURL:(NSURL *)url
   sourceApplication:(NSString *)sourceApplication
@@ -100,10 +104,15 @@ static NSString *const CUSTOM_URL_PREFIX_TO_IGNORE = @"/__/auth/callback";
             // At this point you may display default onboarding view.
         }
     }
+
+    NSDictionary *options = @{
+        @"UIApplicationOpenURLOptionsSourceApplicationKey": orNull(sourceApplication),
+        @"UIApplicationOpenURLOptionsAnnotationKey": orNull(annotation)
+    };
+
     return [super application: application
                       openURL:url
-            sourceApplication:sourceApplication
-                   annotation:annotation];
+                      options:options];
 }
 
 // [END continueuseractivity]
