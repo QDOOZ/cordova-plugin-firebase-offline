@@ -15,6 +15,7 @@ repositories {
 }
 dependencies {
     compile 'com.google.firebase:firebase-core:16.0.8'
+    implementation 'com.google.code.gson:gson:2.8.5'
 }
 // apply plugin: 'com.google.gms.google-services'
 // class must be used instead of id(string) to be able to apply plugin from non-root gradle file
