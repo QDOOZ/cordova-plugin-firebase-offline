@@ -12,6 +12,17 @@ static FIRUser* anonymousUser;
     }
 }
 
+- (NSObject*)preventNull:(NSObject*)obj {
+    return obj ? obj : @"";
+}
+
+- (NSString*)convertDateToTimestamp:(NSDate*)date {
+    NSDateFormatter* dateFormatter = [[NSDateFormatter alloc] init];
+    dateFormatter.dateFormat = @"yyyy-MM-dd'T'HH:mm:ssZZZZZ";
+    dateFormatter.timeZone = [NSTimeZone timeZoneForSecondsFromGMT:0];
+    return [dateFormatter stringFromDate:date];
+}
+
 - (void)getIdToken:(CDVInvokedUrlCommand *)command {
     BOOL forceRefresh = [[command.arguments objectAtIndex:0] boolValue];
     FIRUser *user = [FIRAuth auth].currentUser;
