@@ -44,6 +44,38 @@ static FIRUser* anonymousUser;
     }
 }
 
+- (void)getIdTokenResult:(CDVInvokedUrlCommand *)command {
+    BOOL forceRefresh = [[command.arguments objectAtIndex:0] boolValue];
+    FIRUser *user = [FIRAuth auth].currentUser;
+
+    if (user) {
+        [user getIDTokenResultForcingRefresh:forceRefresh completion:^(FIRAuthTokenResult *_Nullable tokenResult, NSError *_Nullable error) {
+            CDVPluginResult *pluginResult;
+            if (error) {
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:error.localizedDescription];
+            } else {
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:[self tokenResultToDictionary:tokenResult]];
+            }
+
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+        }];
+    } else {
+        CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"User must be signed in"];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    }
+}
+
+- (NSDictionary*)tokenResultToDictionary:(FIRAuthTokenResult *)tokenResult {
+    return @{
+        @"token": [self preventNull:tokenResult.token],
+        @"expirationDate": [self preventNull:[self convertDateToTimestamp:tokenResult.expirationDate]],
+        @"authDate": [self preventNull:[self convertDateToTimestamp:tokenResult.authDate]],
+        @"issuedAtDate": [self preventNull:[self convertDateToTimestamp:tokenResult.issuedAtDate]],
+        @"signInProvider": [self preventNull:tokenResult.signInProvider],
+        @"claims": [self preventNull:tokenResult.claims]
+    };
+}
+
 - (void)createUserWithEmailAndPassword:(CDVInvokedUrlCommand *)command {
     NSString* email = [command.arguments objectAtIndex:0];
     NSString* password = [command.arguments objectAtIndex:1];
