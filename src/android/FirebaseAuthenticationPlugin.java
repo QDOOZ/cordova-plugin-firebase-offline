@@ -24,6 +24,7 @@ import com.google.firebase.auth.UserProfileChangeRequest;
 import com.google.firebase.FirebaseException;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.gson.Gson;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
@@ -68,6 +69,46 @@ public class FirebaseAuthenticationPlugin extends ReflectiveCordovaPlugin implem
                     public void onComplete(Task<GetTokenResult> task) {
                         if (task.isSuccessful()) {
                             callbackContext.success(task.getResult().getToken());
+                        } else {
+                            callbackContext.error(task.getException().getMessage());
+                        }
+                    }
+                });
+        }
+    }
+
+    private static JSONObject parseTokenResult(GetTokenResult tokenResult) {
+        JSONObject parsedTokenResult = new JSONObject();
+
+        try {
+            String claimsStr = new Gson().toJson(tokenResult.getClaims());
+            JSONObject claims = new JSONObject(claimsStr);
+
+            parsedTokenResult.put("authTimestamp", tokenResult.getAuthTimestamp());
+            parsedTokenResult.put("claims", claims);
+            parsedTokenResult.put("expirationTimestamp", tokenResult.getExpirationTimestamp());
+            parsedTokenResult.put("signInProvider", tokenResult.getSignInProvider());
+            parsedTokenResult.put("token", tokenResult.getToken());
+        } catch (JSONException e) {
+            Log.e(TAG, "Fail to parse token result", e);
+        }
+
+        return parsedTokenResult;
+    }
+
+    @CordovaMethod
+    private void getIdTokenResult(boolean forceRefresh, final CallbackContext callbackContext) {
+        FirebaseUser user = firebaseAuth.getCurrentUser();
+
+        if (user == null) {
+            callbackContext.error("User is not authorized");
+        } else {
+            user.getIdToken(forceRefresh)
+                .addOnCompleteListener(cordova.getActivity(), new OnCompleteListener<GetTokenResult>() {
+                    @Override
+                    public void onComplete(Task<GetTokenResult> task) {
+                        if (task.isSuccessful()) {
+                            callbackContext.success(parseTokenResult(task.getResult()));
                         } else {
                             callbackContext.error(task.getException().getMessage());
                         }
