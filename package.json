@@ -1,6 +1,6 @@
 {
   "name": "cordova-plugin-firebase-dynamiclinks-db-auth",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Cordova plugin for Firebase Authentication, Realtime Database and Dynamic Links",
   "cordova": {
     "id": "cordova-plugin-firebase-dynamiclinks-db-auth",
