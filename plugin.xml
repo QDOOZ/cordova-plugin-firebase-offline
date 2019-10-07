@@ -115,8 +115,8 @@ xmlns:android="http://schemas.android.com/apk/res/android"
         <framework src="com.google.firebase:firebase-config:$FIREBASE_VERSION" />
         <framework src="com.google.firebase:firebase-messaging:$FIREBASE_MESSAGING_VERSION" />
 
-		<framework src="src/android/FCMPlugin.gradle" custom="true" type="gradleReference"/>
-        <framework src="com.google.code.gson:gson:2+"/>
+		    <framework src="src/android/FCMPlugin.gradle" custom="true" type="gradleReference"/>
+        <framework src="com.google.code.gson:gson:2.8.5"/>
     </platform>
 
     <platform name="ios">
